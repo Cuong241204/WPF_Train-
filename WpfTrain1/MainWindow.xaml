@@ -1,0 +1,48 @@
+﻿<Window x:Class="WpfTrain1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Simple WPF CRUD" Height="450" Width="750">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <DataGrid x:Name="DataGridItems"
+                  AutoGenerateColumns="False"
+                  SelectionMode="Single"
+                  Margin="0 0 10 0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                <DataGridTextColumn Header="Price" Binding="{Binding Price}" Width="100"/>
+                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Column="1" Margin="10">
+            <TextBlock Text="Category:"/>
+            <ComboBox x:Name="CbCategory" Width="150" Margin="0 0 0 10">
+                <ComboBoxItem Content="Food"/>
+                <ComboBoxItem Content="Drink"/>
+                <ComboBoxItem Content="Electronics"/>
+                <ComboBoxItem Content="Other"/>
+            </ComboBox>
+
+            <TextBlock Text="ID:"/>
+            <TextBox x:Name="TbId"/>
+
+            <TextBlock Text="Name:" Margin="0 10 0 0"/>
+            <TextBox x:Name="TbName"/>
+
+            <TextBlock Text="Price:" Margin="0 10 0 0"/>
+            <TextBox x:Name="TbPrice"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0 20 0 0">
+                <Button Content="Add" Width="60" Margin="0 0 10 0" Click="BtnAdd_Click"/>
+                <Button Content="Edit" Width="60" Margin="0 0 10 0" Click="BtnEdit_Click"/>
+                <Button Content="Delete" Width="60" Click="BtnDelete_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>
