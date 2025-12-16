@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,203 +8,172 @@ namespace WpfTrain1
 {
     public partial class MainWindow : Window
     {
-        ObservableCollection<Item> Items = new ObservableCollection<Item>();
-        List<Item> FilteredItems = new List<Item>();   // sau khi search
-        List<Item> PagedItems = new List<Item>();      // dữ liệu đang hiển thị theo trang
+        private List<Product> _allProducts = new List<Product>();
 
-        int CurrentPage = 1;
-        int PageSize = 5;   // mỗi trang 5 dòng
+        private int _currentPage = 1;
+        private int _pageSize = 5;
+        private int _totalPages = 1;
 
         public MainWindow()
         {
             InitializeComponent();
-
-            // Sample data
-            Items.Add(new Item { Id = 1, Name = "Cuong", Price = 100, Category = "Food" });
-            Items.Add(new Item { Id = 2, Name = "Anh", Price = 20, Category = "Drink" });
-            Items.Add(new Item { Id = 3, Name = "Cong", Price = 50, Category = "Food" });
-            Items.Add(new Item { Id = 4, Name = "Long", Price = 70, Category = "Electronics" });
-            Items.Add(new Item { Id = 5, Name = "Hai", Price = 80, Category = "Food" });
-            Items.Add(new Item { Id = 6, Name = "Tuan", Price = 90, Category = "Other" });
-
-            FilteredItems = Items.ToList();
-
+            SeedData();
             LoadPage();
         }
 
+        private void SeedData()
+        {
+            _allProducts.Clear();
 
-        // ============================
-        //       PAGINATION
-        // ============================
+            for (int i = 1; i <= 7; i++)
+            {
+                _allProducts.Add(new Product
+                {
+                    Id = i,
+                    Name = "Product " + i,
+                    Price = i * 10,
+                    Category = i % 2 == 0 ? "Food" : "Drink"
+                });
+            }
+
+            CalculateTotalPages();
+        }
+
+        private void CalculateTotalPages()
+        {
+            _totalPages = (int)Math.Ceiling((double)_allProducts.Count / _pageSize);
+            if (_totalPages == 0) _totalPages = 1;
+            if (_currentPage > _totalPages) _currentPage = _totalPages;
+        }
+
         private void LoadPage()
         {
-            int totalPages = (int)Math.Ceiling((double)FilteredItems.Count / PageSize);
-            if (totalPages == 0) totalPages = 1;
-            if (CurrentPage > totalPages) CurrentPage = totalPages;
-            if (CurrentPage < 1) CurrentPage = 1;
-
-            PagedItems = FilteredItems
-                .Skip((CurrentPage - 1) * PageSize)
-                .Take(PageSize)
+            ProductGrid.ItemsSource = _allProducts
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
                 .ToList();
 
-            DataGridItems.ItemsSource = PagedItems;
-
-            TxtPageInfo.Text = $"Page {CurrentPage} / {totalPages}";
+            TxtPage.Text = $"{_currentPage} / {_totalPages}";
         }
 
-        private void BtnPrev_Click(object sender, RoutedEventArgs e)
+        private void Prev_Click(object sender, RoutedEventArgs e)
         {
-            CurrentPage--;
-            LoadPage();
+            if (_currentPage > 1)
+            {
+                _currentPage--;
+                LoadPage();
+            }
         }
 
-        private void BtnNext_Click(object sender, RoutedEventArgs e)
+        private void Next_Click(object sender, RoutedEventArgs e)
         {
-            CurrentPage++;
-            LoadPage();
+            if (_currentPage < _totalPages)
+            {
+                _currentPage++;
+                LoadPage();
+            }
         }
 
-
-        private void BtnSearch_Click(object sender, RoutedEventArgs e)
+        private void Add_Click(object sender, RoutedEventArgs e)
         {
-            string keyword = TbSearch.Text.Trim().ToLower();
-
-            FilteredItems = Items
-                .Where(i => i.Name.ToLower().Contains(keyword)
-                         || i.Category.ToLower().Contains(keyword))
-                .ToList();
-
-            CurrentPage = 1;
-            LoadPage();
-
-            TxtStatus.Text = $"Found {FilteredItems.Count} result(s).";
-        }
-
-        private void BtnClearSearch_Click(object sender, RoutedEventArgs e)
-        {
-            TbSearch.Text = "";
-            FilteredItems = Items.ToList();
-            CurrentPage = 1;
-            LoadPage();
-
-            TxtStatus.Text = "Search cleared.";
-        }
-
-
-        // ============================
-        //            CRUD
-        // ============================
-        private void BtnAdd_Click(object sender, RoutedEventArgs e)
-        {
+            // Validation
             if (!int.TryParse(TbId.Text, out int id))
             {
-                MessageBox.Show("ID must be a number.");
+                MessageBox.Show("ID phải là số nguyên. Vui lòng nhập lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TbId.Focus();
                 return;
             }
-            if (!double.TryParse(TbPrice.Text, out double price))
+
+            if (string.IsNullOrWhiteSpace(TbName.Text))
             {
-                MessageBox.Show("Price must be a number.");
+                MessageBox.Show("Tên sản phẩm không được để trống.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TbName.Focus();
                 return;
             }
 
-            string category = (CbCategory.SelectedItem as ComboBoxItem)?.Content.ToString();
+            if (!decimal.TryParse(TbPrice.Text, out decimal price))
+            {
+                MessageBox.Show("Price phải là số. Vui lòng nhập lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TbPrice.Focus();
+                return;
+            }
 
-            var newItem = new Item
+            if (CbCategory.SelectedItem == null)
+            {
+                MessageBox.Show("Bạn phải chọn Category.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CbCategory.Focus();
+                return;
+            }
+
+            _allProducts.Add(new Product
             {
                 Id = id,
-                Name = TbName.Text,
+                Name = TbName.Text.Trim(),
                 Price = price,
-                Category = category
-            };
+                Category = ((ComboBoxItem)CbCategory.SelectedItem).Content.ToString()
+            });
 
-            Items.Add(newItem);
-
-            FilteredItems = Items.ToList();
+            CalculateTotalPages();
             LoadPage();
-
-            TxtStatus.Text = "Item added.";
         }
 
-        private void BtnEdit_Click(object sender, RoutedEventArgs e)
+        private void Edit_Click(object sender, RoutedEventArgs e)
         {
-            if (DataGridItems.SelectedItem is Item item)
+            if (!(ProductGrid.SelectedItem is Product p))
+                return;
+
+            // Validation
+            if (!int.TryParse(TbId.Text, out int id))
             {
-                if (!int.TryParse(TbId.Text, out int id))
-                {
-                    MessageBox.Show("ID must be a number.");
-                    return;
-                }
-                if (!double.TryParse(TbPrice.Text, out double price))
-                {
-                    MessageBox.Show("Price must be a number.");
-                    return;
-                }
-
-                item.Id = id;
-                item.Name = TbName.Text;
-                item.Price = price;
-                item.Category = (CbCategory.SelectedItem as ComboBoxItem)?.Content.ToString();
-
-                DataGridItems.Items.Refresh();
-                TxtStatus.Text = "Item updated.";
+                MessageBox.Show("ID phải là số nguyên. Vui lòng nhập lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TbId.Focus();
+                return;
             }
+
+            if (string.IsNullOrWhiteSpace(TbName.Text))
+            {
+                MessageBox.Show("Tên sản phẩm không được để trống.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TbName.Focus();
+                return;
+            }
+
+            if (!decimal.TryParse(TbPrice.Text, out decimal price))
+            {
+                MessageBox.Show("Price phải là số. Vui lòng nhập lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TbPrice.Focus();
+                return;
+            }
+
+            if (CbCategory.SelectedItem == null)
+            {
+                MessageBox.Show("Bạn phải chọn Category.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CbCategory.Focus();
+                return;
+            }
+
+            p.Id = id;
+            p.Name = TbName.Text.Trim();
+            p.Price = price;
+            p.Category = ((ComboBoxItem)CbCategory.SelectedItem).Content.ToString();
+            LoadPage();
         }
 
-        private void BtnDelete_Click(object sender, RoutedEventArgs e)
+        private void Delete_Click(object sender, RoutedEventArgs e)
         {
-            if (DataGridItems.SelectedItem is Item item)
+            if (ProductGrid.SelectedItem is Product p)
             {
-                Items.Remove(item);
-
-                FilteredItems = Items.ToList();
+                _allProducts.Remove(p);
+                CalculateTotalPages();
                 LoadPage();
-
-                TxtStatus.Text = "Item deleted.";
             }
-        }
-
-
-        // ============================
-        //    FILL FORM WHEN SELECT
-        // ============================
-        private void DataGridItems_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (DataGridItems.SelectedItem is Item item)
-            {
-                TbId.Text = item.Id.ToString();
-                TbName.Text = item.Name;
-                TbPrice.Text = item.Price.ToString();
-
-                foreach (ComboBoxItem cb in CbCategory.Items)
-                {
-                    if (cb.Content.ToString() == item.Category)
-                    {
-                        CbCategory.SelectedItem = cb;
-                        break;
-                    }
-                }
-            }
-        }
-
-        private void BtnClearForm_Click(object sender, RoutedEventArgs e)
-        {
-            TbId.Text = "";
-            TbName.Text = "";
-            TbPrice.Text = "";
-            TbSearch.Text = "";
-            CbCategory.SelectedIndex = -1;
-
-            DataGridItems.UnselectAll();
-            TxtStatus.Text = "Form cleared.";
         }
     }
 
-    public class Item
+    public class Product
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public double Price { get; set; }
+        public decimal Price { get; set; }
         public string Category { get; set; }
     }
 }
