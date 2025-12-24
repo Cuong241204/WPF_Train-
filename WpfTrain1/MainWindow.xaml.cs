@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -8,172 +8,187 @@ namespace WpfTrain1
 {
     public partial class MainWindow : Window
     {
-        private List<Product> _allProducts = new List<Product>();
+        public class SanPham : INotifyPropertyChanged, IDataErrorInfo
+        {
+            private int _ma;
+            private string _ten;
+            private int _gia;
 
-        private int _currentPage = 1;
+            public int Ma
+            {
+                get => _ma;
+                set { _ma = value; OnPropertyChanged(nameof(Ma)); }
+            }
+
+            public string Ten
+            {
+                get => _ten;
+                set { _ten = value; OnPropertyChanged(nameof(Ten)); }
+            }
+
+            public int Gia
+            {
+                get => _gia;
+                set { _gia = value; OnPropertyChanged(nameof(Gia)); }
+            }
+
+            public string Error => null;
+
+            public string this[string columnName]
+            {
+                get
+                {
+                    if (columnName == nameof(Ten))
+                    {
+                        if (string.IsNullOrWhiteSpace(Ten))
+                            return "Tên sản phẩm không được để trống";
+                    }
+                    return null;
+                }
+            }
+
+            public event PropertyChangedEventHandler PropertyChanged;
+            private void OnPropertyChanged(string name)
+                => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
+
+        private ObservableCollection<SanPham> _all = new ObservableCollection<SanPham>();
+        private ObservableCollection<SanPham> _page = new ObservableCollection<SanPham>();
+        private SanPham _current = new SanPham();
+
         private int _pageSize = 5;
-        private int _totalPages = 1;
+        private int _pageIndex = 1;
 
         public MainWindow()
         {
             InitializeComponent();
-            SeedData();
+            DataContext = _current;
+            dgSanPham.ItemsSource = _page;
             LoadPage();
-        }
-
-        private void SeedData()
-        {
-            _allProducts.Clear();
-
-            for (int i = 1; i <= 7; i++)
-            {
-                _allProducts.Add(new Product
-                {
-                    Id = i,
-                    Name = "Product " + i,
-                    Price = i * 10,
-                    Category = i % 2 == 0 ? "Food" : "Drink"
-                });
-            }
-
-            CalculateTotalPages();
-        }
-
-        private void CalculateTotalPages()
-        {
-            _totalPages = (int)Math.Ceiling((double)_allProducts.Count / _pageSize);
-            if (_totalPages == 0) _totalPages = 1;
-            if (_currentPage > _totalPages) _currentPage = _totalPages;
         }
 
         private void LoadPage()
         {
-            ProductGrid.ItemsSource = _allProducts
-                .Skip((_currentPage - 1) * _pageSize)
-                .Take(_pageSize)
-                .ToList();
+            _page.Clear();
 
-            TxtPage.Text = $"{_currentPage} / {_totalPages}";
+            var items = _all
+                .Skip((_pageIndex - 1) * _pageSize)
+                .Take(_pageSize);
+
+            foreach (var i in items)
+                _page.Add(i);
+
+            int totalPage = (_all.Count + _pageSize - 1) / _pageSize;
+            txtPage.Text = $"Trang {_pageIndex}/{(totalPage == 0 ? 1 : totalPage)}";
         }
 
+        private bool IsValidInput()
+        {
+            return _current.Ma > 0
+                && _current.Gia > 0
+                && !string.IsNullOrWhiteSpace(_current.Ten);
+        }
+
+        private void ResetForm()
+        {
+            _current.Ma = 0;
+            _current.Ten = "";
+            _current.Gia = 0;
+            dgSanPham.SelectedItem = null;
+        }
+
+        private void BtnThem_Click(object sender, RoutedEventArgs e)
+        {
+            if (!IsValidInput())
+            {
+                MessageBox.Show("Vui lòng nhập đủ thông tin",
+                                "Thông báo",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                return;
+            }
+
+            _all.Add(new SanPham
+            {
+                Ma = _current.Ma,
+                Ten = _current.Ten,
+                Gia = _current.Gia
+            });
+
+            ResetForm();
+            LoadPage();
+        }
+
+        private void dgSanPham_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            SanPham sp = dgSanPham.SelectedItem as SanPham;
+            if (sp != null)
+            {
+                _current.Ma = sp.Ma;
+                _current.Ten = sp.Ten;
+                _current.Gia = sp.Gia;
+            }
+        }
+
+       
+        private void BtnSua_Click(object sender, RoutedEventArgs e)
+        {
+            SanPham sp = dgSanPham.SelectedItem as SanPham;
+            if (sp == null)
+            {
+                MessageBox.Show("Vui lòng chọn sản phẩm cần sửa");
+                return;
+            }
+
+            if (!IsValidInput())
+            {
+                MessageBox.Show("Vui lòng nhập đủ thông tin");
+                return;
+            }
+
+            sp.Ma = _current.Ma;
+            sp.Ten = _current.Ten;
+            sp.Gia = _current.Gia;
+
+            ResetForm();
+            LoadPage();
+        }
+
+        // ===== DELETE =====
+        private void BtnXoa_Click(object sender, RoutedEventArgs e)
+        {
+            SanPham sp = dgSanPham.SelectedItem as SanPham;
+            if (sp == null) return;
+
+            if (MessageBox.Show("Bạn có chắc muốn xóa?",
+                                "Xác nhận",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                _all.Remove(sp);
+                ResetForm();
+                LoadPage();
+            }
+        }
+
+       
         private void Prev_Click(object sender, RoutedEventArgs e)
         {
-            if (_currentPage > 1)
+            if (_pageIndex > 1)
             {
-                _currentPage--;
+                _pageIndex--;
                 LoadPage();
             }
         }
 
         private void Next_Click(object sender, RoutedEventArgs e)
         {
-            if (_currentPage < _totalPages)
+            int totalPage = (_all.Count + _pageSize - 1) / _pageSize;
+            if (_pageIndex < totalPage)
             {
-                _currentPage++;
+                _pageIndex++;
                 LoadPage();
             }
         }
-
-        private void Add_Click(object sender, RoutedEventArgs e)
-        {
-            // Validation
-            if (!int.TryParse(TbId.Text, out int id))
-            {
-                MessageBox.Show("ID phải là số nguyên. Vui lòng nhập lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
-                TbId.Focus();
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(TbName.Text))
-            {
-                MessageBox.Show("Tên sản phẩm không được để trống.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
-                TbName.Focus();
-                return;
-            }
-
-            if (!decimal.TryParse(TbPrice.Text, out decimal price))
-            {
-                MessageBox.Show("Price phải là số. Vui lòng nhập lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
-                TbPrice.Focus();
-                return;
-            }
-
-            if (CbCategory.SelectedItem == null)
-            {
-                MessageBox.Show("Bạn phải chọn Category.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
-                CbCategory.Focus();
-                return;
-            }
-
-            _allProducts.Add(new Product
-            {
-                Id = id,
-                Name = TbName.Text.Trim(),
-                Price = price,
-                Category = ((ComboBoxItem)CbCategory.SelectedItem).Content.ToString()
-            });
-
-            CalculateTotalPages();
-            LoadPage();
-        }
-
-        private void Edit_Click(object sender, RoutedEventArgs e)
-        {
-            if (!(ProductGrid.SelectedItem is Product p))
-                return;
-
-            // Validation
-            if (!int.TryParse(TbId.Text, out int id))
-            {
-                MessageBox.Show("ID phải là số nguyên. Vui lòng nhập lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
-                TbId.Focus();
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(TbName.Text))
-            {
-                MessageBox.Show("Tên sản phẩm không được để trống.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
-                TbName.Focus();
-                return;
-            }
-
-            if (!decimal.TryParse(TbPrice.Text, out decimal price))
-            {
-                MessageBox.Show("Price phải là số. Vui lòng nhập lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
-                TbPrice.Focus();
-                return;
-            }
-
-            if (CbCategory.SelectedItem == null)
-            {
-                MessageBox.Show("Bạn phải chọn Category.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
-                CbCategory.Focus();
-                return;
-            }
-
-            p.Id = id;
-            p.Name = TbName.Text.Trim();
-            p.Price = price;
-            p.Category = ((ComboBoxItem)CbCategory.SelectedItem).Content.ToString();
-            LoadPage();
-        }
-
-        private void Delete_Click(object sender, RoutedEventArgs e)
-        {
-            if (ProductGrid.SelectedItem is Product p)
-            {
-                _allProducts.Remove(p);
-                CalculateTotalPages();
-                LoadPage();
-            }
-        }
-    }
-
-    public class Product
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public decimal Price { get; set; }
-        public string Category { get; set; }
     }
 }
