@@ -4,6 +4,27 @@
              xmlns:local="clr-namespace:WpfTrain1"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <local:MinValueConverter x:Key="Min1" Min="0"/>
+        <local:NotEmptyConverter x:Key="NotEmpty"/>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Validation.ErrorTemplate">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border BorderBrush="Red" BorderThickness="1">
+                            <AdornedElementPlaceholder/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="Validation.HasError" Value="True">
+                    <Setter Property="ToolTip"
+                        Value="{Binding (Validation.Errors)[0].ErrorContent,
+                                RelativeSource={RelativeSource Self}}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Application.Resources>
+
 </Application>

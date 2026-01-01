@@ -1,8 +1,10 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 
 namespace WpfTrain1
 {
@@ -38,18 +40,25 @@ namespace WpfTrain1
             {
                 get
                 {
-                    if (columnName == nameof(Ten))
+                    switch (columnName)
                     {
-                        if (string.IsNullOrWhiteSpace(Ten))
-                            return "Tên sản phẩm không được để trống";
+                        case nameof(Ma):
+                            if (Ma <= 0) return "Mã SP phải > 0";
+                            break;
+                        case nameof(Ten):
+                            if (string.IsNullOrWhiteSpace(Ten)) return "Tên SP không được để trống";
+                            break;
+                        case nameof(Gia):
+                            if (Gia <= 0) return "Giá phải > 0";
+                            break;
                     }
                     return null;
                 }
             }
 
             public event PropertyChangedEventHandler PropertyChanged;
-            private void OnPropertyChanged(string name)
-                => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            private void OnPropertyChanged(string prop) =>
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
         }
 
         private ObservableCollection<SanPham> _all = new ObservableCollection<SanPham>();
@@ -70,13 +79,8 @@ namespace WpfTrain1
         private void LoadPage()
         {
             _page.Clear();
-
-            var items = _all
-                .Skip((_pageIndex - 1) * _pageSize)
-                .Take(_pageSize);
-
-            foreach (var i in items)
-                _page.Add(i);
+            var items = _all.Skip((_pageIndex - 1) * _pageSize).Take(_pageSize);
+            foreach (var i in items) _page.Add(i);
 
             int totalPage = (_all.Count + _pageSize - 1) / _pageSize;
             txtPage.Text = $"Trang {_pageIndex}/{(totalPage == 0 ? 1 : totalPage)}";
@@ -84,9 +88,9 @@ namespace WpfTrain1
 
         private bool IsValidInput()
         {
-            return _current.Ma > 0
-                && _current.Gia > 0
-                && !string.IsNullOrWhiteSpace(_current.Ten);
+            return string.IsNullOrEmpty(_current[nameof(SanPham.Ma)]) &&
+                   string.IsNullOrEmpty(_current[nameof(SanPham.Ten)]) &&
+                   string.IsNullOrEmpty(_current[nameof(SanPham.Gia)]);
         }
 
         private void ResetForm()
@@ -97,16 +101,22 @@ namespace WpfTrain1
             dgSanPham.SelectedItem = null;
         }
 
+        private bool HasValidationError()
+        {
+            return !IsValidInput();
+        }
+
         private void BtnThem_Click(object sender, RoutedEventArgs e)
         {
-            if (!IsValidInput())
+            BindingExpression[] bindings =
             {
-                MessageBox.Show("Vui lòng nhập đủ thông tin",
-                                "Thông báo",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning);
-                return;
-            }
+                txtMa.GetBindingExpression(TextBox.TextProperty),
+                txtTen.GetBindingExpression(TextBox.TextProperty),
+                txtGia.GetBindingExpression(TextBox.TextProperty)
+            };
+            foreach (var b in bindings) b?.UpdateSource();
+
+            if (HasValidationError()) return;
 
             _all.Add(new SanPham
             {
@@ -117,6 +127,47 @@ namespace WpfTrain1
 
             ResetForm();
             LoadPage();
+        }
+
+        private void BtnSua_Click(object sender, RoutedEventArgs e)
+        {
+            SanPham sp = dgSanPham.SelectedItem as SanPham;
+            if (sp == null)
+            {
+                MessageBox.Show("Vui lòng chọn sản phẩm cần sửa");
+                return;
+            }
+
+            BindingExpression[] bindings =
+            {
+                txtMa.GetBindingExpression(TextBox.TextProperty),
+                txtTen.GetBindingExpression(TextBox.TextProperty),
+                txtGia.GetBindingExpression(TextBox.TextProperty)
+            };
+            foreach (var b in bindings) b?.UpdateSource();
+
+            if (HasValidationError()) return;
+
+            sp.Ma = _current.Ma;
+            sp.Ten = _current.Ten;
+            sp.Gia = _current.Gia;
+
+            ResetForm();
+            LoadPage();
+        }
+
+        private void BtnXoa_Click(object sender, RoutedEventArgs e)
+        {
+            SanPham sp = dgSanPham.SelectedItem as SanPham;
+            if (sp == null) return;
+
+            if (MessageBox.Show("Bạn có chắc muốn xóa?", "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                == MessageBoxResult.Yes)
+            {
+                _all.Remove(sp);
+                ResetForm();
+                LoadPage();
+            }
         }
 
         private void dgSanPham_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -130,65 +181,15 @@ namespace WpfTrain1
             }
         }
 
-       
-        private void BtnSua_Click(object sender, RoutedEventArgs e)
-        {
-            SanPham sp = dgSanPham.SelectedItem as SanPham;
-            if (sp == null)
-            {
-                MessageBox.Show("Vui lòng chọn sản phẩm cần sửa");
-                return;
-            }
-
-            if (!IsValidInput())
-            {
-                MessageBox.Show("Vui lòng nhập đủ thông tin");
-                return;
-            }
-
-            sp.Ma = _current.Ma;
-            sp.Ten = _current.Ten;
-            sp.Gia = _current.Gia;
-
-            ResetForm();
-            LoadPage();
-        }
-
-        // ===== DELETE =====
-        private void BtnXoa_Click(object sender, RoutedEventArgs e)
-        {
-            SanPham sp = dgSanPham.SelectedItem as SanPham;
-            if (sp == null) return;
-
-            if (MessageBox.Show("Bạn có chắc muốn xóa?",
-                                "Xác nhận",
-                                MessageBoxButton.YesNo,
-                                MessageBoxImage.Question) == MessageBoxResult.Yes)
-            {
-                _all.Remove(sp);
-                ResetForm();
-                LoadPage();
-            }
-        }
-
-       
         private void Prev_Click(object sender, RoutedEventArgs e)
         {
-            if (_pageIndex > 1)
-            {
-                _pageIndex--;
-                LoadPage();
-            }
+            if (_pageIndex > 1) { _pageIndex--; LoadPage(); }
         }
 
         private void Next_Click(object sender, RoutedEventArgs e)
         {
             int totalPage = (_all.Count + _pageSize - 1) / _pageSize;
-            if (_pageIndex < totalPage)
-            {
-                _pageIndex++;
-                LoadPage();
-            }
+            if (_pageIndex < totalPage) { _pageIndex++; LoadPage(); }
         }
     }
 }

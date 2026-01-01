@@ -6,20 +6,6 @@
         Width="820"
         WindowStartupLocation="CenterScreen">
 
-    <!-- STYLE VALIDATION -->
-    <Window.Resources>
-        <Style TargetType="TextBox">
-            <Style.Triggers>
-                <Trigger Property="Validation.HasError" Value="True">
-                    <Setter Property="Background" Value="#FFFFC0C0"/>
-                    <Setter Property="ToolTip"
-                            Value="{Binding RelativeSource={RelativeSource Self},
-                                            Path=(Validation.Errors)[0].ErrorContent}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </Window.Resources>
-
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -30,40 +16,17 @@
 
         <!-- FORM -->
         <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
-
             <Label Content="Mã SP:" Width="60"/>
-            <TextBox Width="120">
-                <TextBox.Text>
-                    <Binding Path="Ma"
-                             UpdateSourceTrigger="PropertyChanged"
-                             NotifyOnValidationError="True">
-                        <Binding.ValidationRules>
-                            <ExceptionValidationRule/>
-                        </Binding.ValidationRules>
-                    </Binding>
-                </TextBox.Text>
-            </TextBox>
+            <TextBox x:Name="txtMa" Width="50"
+                     Text="{Binding Ma, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"/>
 
             <Label Content="Tên SP:" Width="70" Margin="10 0 0 0"/>
-            <TextBox Width="180"
-                     Text="{Binding Ten,
-                                    UpdateSourceTrigger=PropertyChanged,
-                                    NotifyOnValidationError=True,
-                                    ValidatesOnDataErrors=True}"/>
+            <TextBox x:Name="txtTen" Width="120" MaxLength="50"
+                     Text="{Binding Ten, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"/>
 
             <Label Content="Giá:" Width="40" Margin="10 0 0 0"/>
-            <TextBox Width="120">
-                <TextBox.Text>
-                    <Binding Path="Gia"
-                             UpdateSourceTrigger="PropertyChanged"
-                             NotifyOnValidationError="True">
-                        <Binding.ValidationRules>
-                            <ExceptionValidationRule/>
-                        </Binding.ValidationRules>
-                    </Binding>
-                </TextBox.Text>
-            </TextBox>
-
+            <TextBox x:Name="txtGia" Width="60"
+                     Text="{Binding Gia, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"/>
         </StackPanel>
 
         <!-- BUTTON -->
