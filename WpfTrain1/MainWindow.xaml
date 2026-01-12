@@ -7,6 +7,7 @@
         WindowStartupLocation="CenterScreen">
 
     <Grid Margin="10">
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -21,7 +22,7 @@
                      Text="{Binding Ma, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"/>
 
             <Label Content="Tên SP:" Width="70" Margin="10 0 0 0"/>
-            <TextBox x:Name="txtTen" Width="120" MaxLength="50"
+            <TextBox x:Name="txtTen" Width="120"
                      Text="{Binding Ten, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"/>
 
             <Label Content="Giá:" Width="40" Margin="10 0 0 0"/>
@@ -61,6 +62,32 @@
                        VerticalAlignment="Center"/>
             <Button Content="Sau ▶" Width="80" Click="Next_Click"/>
         </StackPanel>
+
+        <!-- ===== LOADING OVERLAY (PROGRESS BAR) ===== -->
+        <Grid x:Name="LoadingOverlay"
+              Background="#80000000"
+              Visibility="Collapsed"
+              Grid.RowSpan="4">
+
+            <Border Background="White"
+                    Padding="20"
+                    CornerRadius="10"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+
+                <StackPanel>
+                    <TextBlock Text="Đang tải dữ liệu..."
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               Margin="0 0 0 10"/>
+
+                    <ProgressBar Width="300"
+                                 Height="20"
+                                 IsIndeterminate="True"/>
+                </StackPanel>
+
+            </Border>
+        </Grid>
 
     </Grid>
 </Window>

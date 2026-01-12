@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:WpfTrain1"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <local:MinValueConverter x:Key="Min1" Min="0"/>
+        <local:MinValueConverter x:Key="Min1" Min="1"/>
         <local:NotEmptyConverter x:Key="NotEmpty"/>
 
         <Style TargetType="TextBox">

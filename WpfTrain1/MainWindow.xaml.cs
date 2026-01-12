@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -10,6 +11,7 @@ namespace WpfTrain1
 {
     public partial class MainWindow : Window
     {
+        // ===== MODEL =====
         public class SanPham : INotifyPropertyChanged, IDataErrorInfo
         {
             private int _ma;
@@ -61,6 +63,7 @@ namespace WpfTrain1
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
         }
 
+        // ===== DATA =====
         private ObservableCollection<SanPham> _all = new ObservableCollection<SanPham>();
         private ObservableCollection<SanPham> _page = new ObservableCollection<SanPham>();
         private SanPham _current = new SanPham();
@@ -73,9 +76,48 @@ namespace WpfTrain1
             InitializeComponent();
             DataContext = _current;
             dgSanPham.ItemsSource = _page;
-            LoadPage();
+            Loaded += MainWindow_Loaded;
         }
 
+        // ===== LOAD DATA WITH PROGRESS =====
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            await LoadDataAsync();
+        }
+
+        private async Task LoadDataAsync()
+        {
+            LoadingOverlay.Visibility = Visibility.Visible;
+
+            _all.Clear();
+            _pageIndex = 1;
+
+            // ÉP thấy ProgressBar rõ ràng
+            await Task.Delay(1200);
+
+            await Task.Run(() =>
+            {
+                for (int i = 1; i <= 25; i++)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        _all.Add(new SanPham
+                        {
+                            Ma = i,
+                            Ten = "Sản phẩm " + i,
+                            Gia = i * 1000
+                        });
+                    });
+
+                    Task.Delay(150).Wait();
+                }
+            });
+
+            LoadPage();
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        // ===== PAGING =====
         private void LoadPage()
         {
             _page.Clear();
@@ -86,6 +128,7 @@ namespace WpfTrain1
             txtPage.Text = $"Trang {_pageIndex}/{(totalPage == 0 ? 1 : totalPage)}";
         }
 
+        // ===== VALIDATION =====
         private bool IsValidInput()
         {
             return string.IsNullOrEmpty(_current[nameof(SanPham.Ma)]) &&
@@ -101,12 +144,7 @@ namespace WpfTrain1
             dgSanPham.SelectedItem = null;
         }
 
-        private bool HasValidationError()
-        {
-            return !IsValidInput();
-        }
-
-        private void BtnThem_Click(object sender, RoutedEventArgs e)
+        private void UpdateBindings()
         {
             BindingExpression[] bindings =
             {
@@ -115,8 +153,13 @@ namespace WpfTrain1
                 txtGia.GetBindingExpression(TextBox.TextProperty)
             };
             foreach (var b in bindings) b?.UpdateSource();
+        }
 
-            if (HasValidationError()) return;
+        // ===== CRUD =====
+        private void BtnThem_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateBindings();
+            if (!IsValidInput()) return;
 
             _all.Add(new SanPham
             {
@@ -138,15 +181,8 @@ namespace WpfTrain1
                 return;
             }
 
-            BindingExpression[] bindings =
-            {
-                txtMa.GetBindingExpression(TextBox.TextProperty),
-                txtTen.GetBindingExpression(TextBox.TextProperty),
-                txtGia.GetBindingExpression(TextBox.TextProperty)
-            };
-            foreach (var b in bindings) b?.UpdateSource();
-
-            if (HasValidationError()) return;
+            UpdateBindings();
+            if (!IsValidInput()) return;
 
             sp.Ma = _current.Ma;
             sp.Ten = _current.Ten;
@@ -161,8 +197,8 @@ namespace WpfTrain1
             SanPham sp = dgSanPham.SelectedItem as SanPham;
             if (sp == null) return;
 
-            if (MessageBox.Show("Bạn có chắc muốn xóa?", "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Question)
-                == MessageBoxResult.Yes)
+            if (MessageBox.Show("Bạn có chắc muốn xóa?", "Xác nhận",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 _all.Remove(sp);
                 ResetForm();
@@ -183,13 +219,21 @@ namespace WpfTrain1
 
         private void Prev_Click(object sender, RoutedEventArgs e)
         {
-            if (_pageIndex > 1) { _pageIndex--; LoadPage(); }
+            if (_pageIndex > 1)
+            {
+                _pageIndex--;
+                LoadPage();
+            }
         }
 
         private void Next_Click(object sender, RoutedEventArgs e)
         {
             int totalPage = (_all.Count + _pageSize - 1) / _pageSize;
-            if (_pageIndex < totalPage) { _pageIndex++; LoadPage(); }
+            if (_pageIndex < totalPage)
+            {
+                _pageIndex++;
+                LoadPage();
+            }
         }
     }
 }
